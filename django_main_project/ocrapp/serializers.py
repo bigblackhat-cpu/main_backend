@@ -8,9 +8,15 @@ class PingTbSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class UploadFileTbSerializer(serializers.ModelSerializer):
+    file = serializers.FileField()
     class Meta:
         model = UploadFileTb
         fields = ['file']
+class UploadFileTbRetrieveSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UploadFileTb
+        fields = '__all__'
+        
 
 class ListUploadFileTbSerializer(serializers.ModelSerializer):
     class Meta:
@@ -40,5 +46,5 @@ class ListUploadFileProcessedTbSerializer(serializers.ModelSerializer):
 class UploadFileProcessedTbSerializer(serializers.ModelSerializer):
     class Meta:
         model = UploadFileProcessedTb
-        fields = ['processed_file', 'processed_file_type']
+        fields = ['processed_file','upload_file_tb']
 
