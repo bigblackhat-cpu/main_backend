@@ -1,6 +1,8 @@
 from django.shortcuts import render
 from rest_framework.generics import GenericAPIView
 from rest_framework.response import Response
+from rest_framework.decorators import action
+from rest_framework import parsers
 # Create your views here.
 
 
@@ -13,70 +15,47 @@ class PingOcrApp(GenericAPIView):
         return Response('access')
 
 
-from rest_framework.parsers import MultiPartParser
-from .serializers import UploadFileTbSerializer
-class UploadFileView(GenericAPIView):
-    parser_classes=['MultiPartParser']
-    serializer_class=UploadFileTbSerializer
-    def post(self,request, *args, **kwargs):
-        """
-        upload file ocrapp
-        """
-        return Response('upload file')
+from rest_framework import viewsets
+from .models import FileServerTb, ProcessServerTb, UploadFileProcessedTb, UploadFileTb, PingTb
+from .serializers import (FileServerTbSerializer, ListProcessServerTbSerializer,
+                          ListUploadFileProcessedTbSerializer,
+                          ListUploadFileTbSerializer, PingTbSerializer,
+                          ProcessServerTbSerializer,
+                          UploadFileProcessedTbSerializer,
+                          UploadFileTbSerializer)
 
-from rest_framework import generics
-from .serializers import ListUploadFileTbSerializer
-from .models import UploadFileTb
-class ListUploadFileView(generics.ListAPIView):
-    """
-    list select file
-    """
-    serializer_class=ListUploadFileTbSerializer
-    queryset=UploadFileTb.objects.all()
 
-from .serializers import ListProcessServerTbSerializer
-from .models import ProcessServerTb
-class ListProcessServerView(generics.ListAPIView):
-    """
-    Docstring for ListProcessServerView
-    list select process server
-    """
-    serializer_class=ListProcessServerTbSerializer
-    queryset=ProcessServerTb.objects.all()
+class UploadFileViewSet(viewsets.ViewSet):
+    
 
-from .serializers import FileServerTbSerializer
-from .models import FileServerTb
-class CreateFileServerView(generics.CreateAPIView):
-    """
-    Docstring for ListFileServerView
+    def list(self, request):
+        queryset = UploadFileTb.objects.all()
+        serializer = ListUploadFileTbSerializer(queryset, many=True)
+        return Response(serializer.data)
+    
+    def retrieve(self, request, pk=None):
+        try:
+            upload_file = UploadFileTb.objects.get(pk=pk)
+        except UploadFileTb.DoesNotExist:
+            return Response(status=404)
+        serializer = UploadFileTbSerializer(upload_file)
+        return Response(serializer.data)
+    
+    @action(detail=False, methods=['post'])
+    def upload(self, request):
+        # 这个 action 只接受 multipart/form-data
+        # parser_classes 会在下面指定
+        serializer = UploadFileTbSerializer(data=request.data)
+        if serializer.is_valid():
+            # 处理上传逻辑
+            file_obj = serializer.validated_data['file']
+            # ... 保存文件等操作
+            return Response({'status': 'file uploaded'})
+        return Response(serializer.errors)
+    upload.parser_classes = [parsers.MultiPartParser, parsers.FormParser]
 
-    1.目的：可以选择一个文件，和对应的处理服务器，
-    2.生成一个文件-服务器对应关系记录
-    3.对第三方服务发起请求，得到task_id
-    4.file_id-server_id : task_id 存到redis
-    5.返回task_id,或者是提交处理的信息给前端
-    """
-    serializer_class=FileServerTbSerializer
 
-from .serializers import UploadFileProcessedTbSerializer
-from .models import UploadFileProcessedTb
-class UploadFileProcessedView(GenericAPIView):
-    """
-    上传处理完毕后的文件
-    """
-    parser_classes = ['MultiPartParser']
-    serializer_class = UploadFileProcessedTbSerializer
-    def post(self,request, *args, **kwargs):
-        return Response('upload processed file')
 
-from .serializers import ListUploadFileProcessedTbSerializer
-from .models import UploadFileProcessedTb
-class ListUploadFileProcessedView(generics.ListAPIView):
-    """
-    列出处理完毕后的文件
-    """
-    serializer_class=ListUploadFileProcessedTbSerializer
-    queryset=UploadFileProcessedTb.objects.all()
 
 
 

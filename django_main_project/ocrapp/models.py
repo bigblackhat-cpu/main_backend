@@ -7,10 +7,11 @@ class PingTb(models.Model):
 
 
 
+
 class FileServerTb(models.Model):
-    id = models.AutoField(primary_key=True)
-    upload_file_tb = models.ForeignKey('UploadFileTb', on_delete=models.CASCADE)
-    process_server_tb = models.ForeignKey('ProcessServerTb', on_delete=models.CASCADE)
+    id = models.BigAutoField(primary_key=True)
+    upload_file_tb = models.ForeignKey('UploadFileTb', models.DO_NOTHING)
+    process_server_tb = models.ForeignKey('ProcessServerTb', models.DO_NOTHING)
 
     class Meta:
         managed = False
@@ -18,7 +19,7 @@ class FileServerTb(models.Model):
 
 
 class ProcessServerTb(models.Model):
-    id = models.AutoField(primary_key=True)
+    id = models.BigAutoField(primary_key=True)
     server_content = models.CharField(max_length=255)
     server_backend = models.CharField(max_length=2048)
 
@@ -28,8 +29,8 @@ class ProcessServerTb(models.Model):
 
 
 class UploadFileProcessedTb(models.Model):
-    id = models.AutoField(primary_key=True)
-    upload_file_tb = models.ForeignKey('UploadFileTb', on_delete=models.CASCADE)
+    id = models.BigAutoField(primary_key=True)
+    upload_file_tb = models.ForeignKey('UploadFileTb', models.DO_NOTHING)
     processed_file = models.CharField(max_length=2048)
     processed_file_type = models.CharField(max_length=255)
     create_time = models.DateTimeField(blank=True, null=True)
@@ -40,10 +41,10 @@ class UploadFileProcessedTb(models.Model):
 
 
 class UploadFileTb(models.Model):
-    id = models.AutoField(primary_key=True)
+    id = models.BigAutoField(primary_key=True)
     user_id = models.IntegerField()
     filename = models.CharField(max_length=255)
-    file = models.FileField(max_length=512)
+    file = models.CharField(max_length=512)
     file_type = models.CharField(max_length=255)
     create_time = models.DateTimeField(blank=True, null=True)
 
