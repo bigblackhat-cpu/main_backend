@@ -16,27 +16,10 @@ class UploadFileTbRetrieveSerializer(serializers.ModelSerializer):
     class Meta:
         model = UploadFileTb
         fields = '__all__'
-        
-
 class ListUploadFileTbSerializer(serializers.ModelSerializer):
     class Meta:
         model = UploadFileTb
         fields = '__all__'
-
-class ProcessServerTbSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = ProcessServerTb
-        fields = '__all__'
-
-class ListProcessServerTbSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = ProcessServerTb
-        fields = '__all__'
-
-class FileServerTbSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = FileServerTb
-        fields = ['upload_file_tb', 'process_server_tb']
 
 class ListUploadFileProcessedTbSerializer(serializers.ModelSerializer):
     class Meta:
@@ -47,4 +30,20 @@ class UploadFileProcessedTbSerializer(serializers.ModelSerializer):
     class Meta:
         model = UploadFileProcessedTb
         fields = ['processed_file','upload_file_tb']
+
+class ProcessServerTbSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProcessServerTb
+        fields = '__all__'
+
+
+
+
+
+class FileServerTbSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FileServerTb
+        fields = ['upload_file_tb', 'process_server_tb']
+
+
 

@@ -10,8 +10,6 @@ from rest_framework import status
 
 from rest_framework import viewsets
 from .models import (
-    FileServerTb,
-    ProcessServerTb,
     UploadFileProcessedTb,
     UploadFileTb,
 )
@@ -19,9 +17,7 @@ from .serializers import (
     ListUploadFileTbSerializer,
     UploadFileTbRetrieveSerializer,
     UploadFileTbSerializer,
-    ProcessServerTbSerializer,
 )
-
 
 class UploadFileViewSet(viewsets.GenericViewSet):
     parser_classes = [parsers.MultiPartParser, parsers.FormParser, parsers.JSONParser]
@@ -78,7 +74,7 @@ class UploadFileProcessedViewSet(viewsets.GenericViewSet):
         elif self.action == 'list':
             return ListUploadFileProcessedTbSerializer
         elif self.action == 'retrieve':
-            return 
+            return ListUploadFileProcessedTbSerializer
         return ListUploadFileProcessedTbSerializer
     
     def get_queryset(self):
@@ -110,32 +106,130 @@ class UploadFileProcessedViewSet(viewsets.GenericViewSet):
         return Response(serializer.data)
             
 
-
-
-from rest_framework import generics
-
-
-class ListProcessServerAPIView(generics.ListAPIView):
+from .serializers import (
+    ProcessServerTbSerializer
+)
+from .models import (
+    ProcessServerTb
+)
+from drf_spectacular.utils import extend_schema, OpenApiResponse
+class ProcessServerModelViewSet(viewsets.ModelViewSet):
     """
-    list thiry server , now we have，可以ping一下第三方服务
+    除了crud ，还有个，ping 通功能
+    list thiry server , now we have，可以ping一下第三方服务,第三方服务的crud
     """
-
-    serializer_class = ProcessServerTbSerializer
     queryset = ProcessServerTb.objects.all()
+    serializer_class = ProcessServerTbSerializer
 
 
-class ListFileServerTb(generics.GenericAPIView):
-    def get(self, request):
-        """
-        Docstring for post
+    @extend_schema(
+        # 自定义接口描述
+        description="Ping第三方服务器接口",
+        # 定义响应结构
+        responses={
+            200: OpenApiResponse(
+                description="Ping完成",
+                # 显式指定响应结构
+                response={
+                    'type': 'object',
+                    'properties': {
+                        'status': {'type': 'string', 'example': 'ping is over'}
+                    }
+                }
+            )
+        },
+        # 移除默认的请求序列化器（如果不需要）
+        request=None
+    )
+    @action(detail=True,methods=['get'],)
+    def ping_third_server(self, request, pk=None):
+        # serializer=ProcessServerTbSerializer(data=request.data)
+        processServer = self.get_object()
+        # serializer = self.get_serializer(data=request.data)
+        # if serializer.is_valid():
+        processServer.server_backend
+        print(f'ping: third server : {processServer.server_backend} ....')
 
-        返回在redis中，的任务,如果有任务正在计算或pending，如果没有没有计算过或者已经计算结束
-        """
-        return
+        return Response({'status':'ping is over'})
 
-    def post(self, request):
-        """
-        Docstring for post
+            
 
-        发起一个对ocr第三方服务器的请求，要进行提前的判断，任务是否在redis中，
-        """
+"""
+前端拿到taskid可以，轮询拿状态，也可以主动拿状态
+l:返回redis中的全部任务。
+c:接受文件id 第三方服务id，在数据库中查询数据，将数据发送到第三方服务，接受响应，判断响应，redis缓存正确响应的file-id server-id  task-id。
+r:more inform in redis，前端使用taskid，直接对backend发起请求？
+u:-
+d:能够删除未在计算中的任务
+
+"""
+from .serializers import FileServerTbSerializer
+from .models import UploadFileTb,ProcessServerTb
+from django.shortcuts import get_object_or_404
+import requests
+class FileServerGenericViewSet(viewsets.GenericViewSet):
+    def get_serializer_class(self):
+        return FileServerTbSerializer
+    def get_queryset(self):
+        return 
+    
+    def create(self,request):
+        # serializer = FileServerTbSerializer(data=request.data)
+        serializer = self.get_serializer(data=request.data)
+        if serializer.is_valid():
+            file_id = serializer.validated_data['upload_file_tb']
+            process_server_id = serializer.validated_data['process_server_tb']
+            instance_file = get_object_or_404(UploadFileTb,pk=file_id)
+            instance_server = get_object_or_404(ProcessServerTb,pk=process_server_id)
+            try:
+                third_response =requests.post(
+                    url=instance_server.server_backend,
+                    json={
+                        'image_url':instance_file.file
+                    }
+                )
+
+                """通过third_response，得到task_id，将file_id process_server_id task_id 存到redis"""
+                task_id = None
+
+                redis_key = (file_id,process_server_id)
+                redis_value = (task_id)
+
+                redis_storage= redis_key + redis_value
+                return 
+
+            except Exception as e:
+                return Response(e)
+        else:
+            Response(serializer.errors)
+
+
+    def list(self,request):
+        """通过request的json,查询范围内的k-v"""
+
+class TaskStatusGenericAPIView(GenericAPIView):
+    def post(self,request):
+        serializer = FileServerTbSerializer(request.data)
+        if serializer.is_valid():
+            file_id = serializer.validated_data['upload_file_tb']
+            server_id = serializer.validated_data['process_server_tb']
+            "通过file_id，server_id在redis中取出taskid，用taskid 取backend中task的具体任务状态，再序列化成json提供给前端"
+        
+
+class TaskDestroyGenericAPIView(GenericAPIView):
+    def delete(self,request):
+        serializer = FileServerTbSerializer(request.data)
+        if serializer.is_valid():
+            file_id = serializer.validated_data['upload_file_tb']
+            server_id = serializer.validated_data['process_server_tb']
+            "通过file_id，server_id在redis中取出taskid，用taskid 取backend中task的具体任务状态，判断状态，队列中可删除，计算中不可删除，已经完成不可删除由系统自动删除"
+
+    
+
+
+
+
+
+            
+            
+
