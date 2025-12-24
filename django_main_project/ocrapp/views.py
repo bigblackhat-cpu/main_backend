@@ -167,6 +167,7 @@ from .serializers import FileServerTbSerializer
 from .models import UploadFileTb,ProcessServerTb
 from django.shortcuts import get_object_or_404
 import requests
+from django_redis import get_redis_connection
 class FileServerGenericViewSet(viewsets.GenericViewSet):
     def get_serializer_class(self):
         return FileServerTbSerializer
@@ -190,8 +191,12 @@ class FileServerGenericViewSet(viewsets.GenericViewSet):
                 )
 
                 """通过third_response，得到task_id，将file_id process_server_id task_id 存到redis"""
+                
                 task_id = None
 
+
+                redis_client = get_redis_connection('task_cache')
+                redis_client
                 redis_key = (file_id,process_server_id)
                 redis_value = (task_id)
 

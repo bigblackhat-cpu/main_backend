@@ -78,7 +78,7 @@ CORS_ALLOW_HEADERS = [
 ]
 
 
-# cache settings for development
+# redis cache settings for development
 if os.getenv('REDIS_CACHE_LOCATION'):
     CACHES = {
         'default':{
@@ -89,6 +89,14 @@ if os.getenv('REDIS_CACHE_LOCATION'):
             },
             'KEY_PREFIX': 'dev_django_cache_'
             # 'TIMEOUT': 60*15,  # 15 minutes
+        },
+        'task_cache':{
+            'BACKEND': "django.core.cache.RedisCache",
+            'LOCATION': os.getenv('REDIS_CACHE_LOCATION'),
+            "OPTIONS": {
+                "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            },
+            'KEY_PREFIX': 'task_cache_'
         }
     }
 
