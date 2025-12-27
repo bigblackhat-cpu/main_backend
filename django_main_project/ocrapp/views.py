@@ -147,8 +147,17 @@ class ProcessServerModelViewSet(viewsets.ModelViewSet):
         processServer = self.get_object()
         # serializer = self.get_serializer(data=request.data)
         # if serializer.is_valid():
-        processServer.server_backend
-        print(f'ping: third server : {processServer.server_backend} ....')
+        response = requests.get(
+            url=processServer.server_backend,
+        )
+
+        response.status_code
+        print(
+             response.json()
+        )
+       
+
+        print(f'ping: third server : {response.json} ....')
 
         return Response({'status':'ping is over'})
 
@@ -168,6 +177,7 @@ from .models import UploadFileTb,ProcessServerTb
 from django.shortcuts import get_object_or_404
 import requests
 from django_redis import get_redis_connection
+from redis import Redis
 class FileServerGenericViewSet(viewsets.GenericViewSet):
     def get_serializer_class(self):
         return FileServerTbSerializer
@@ -192,16 +202,15 @@ class FileServerGenericViewSet(viewsets.GenericViewSet):
 
                 """通过third_response，得到task_id，将file_id process_server_id task_id 存到redis"""
                 
-                task_id = None
+                # task_id = None
 
-
-                redis_client = get_redis_connection('task_cache')
-                redis_client
-                redis_key = (file_id,process_server_id)
-                redis_value = (task_id)
-
-                redis_storage= redis_key + redis_value
-                return 
+                # redis_client: Redis = get_redis_connection('task_cache')
+                # redis_client.set(
+                #     name=f'{file_id}:{process_server_id}',
+                #     value=task_id,
+                #     ex=30,
+                # )
+                return Response('success',status=status.HTTP_200_OK)
 
             except Exception as e:
                 return Response(e)
@@ -210,7 +219,7 @@ class FileServerGenericViewSet(viewsets.GenericViewSet):
 
 
     def list(self,request):
-        """通过request的json,查询范围内的k-v"""
+        """通过request的json,查询范围内的k-v,通过指定的数据库和前缀查值"""
 
 class TaskStatusGenericAPIView(GenericAPIView):
     def post(self,request):
