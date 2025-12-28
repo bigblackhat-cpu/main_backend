@@ -47,7 +47,7 @@ class UploadFileTb(models.Model):
     filename = models.CharField(max_length=255)
     file = models.FileField(max_length=512,upload_to=r'uploads/%Y-%m-%d/')
     file_type = models.CharField(max_length=255)
-    create_time = models.DateTimeField(blank=True, null=True)
+    create_time = models.DateTimeField(blank=True, null=True,auto_now_add=True)
 
     class Meta:
         managed = False
