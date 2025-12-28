@@ -72,10 +72,12 @@ MEDIA_ROOT = BASE_DIR / 'mediastore/'
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticstore/'
 # cors settings for development
-CORS_ALLOW_HEADERS = [    
+
+CORS_ALLOWED_ORIGINS  = [    
     os.getenv('CORS_ALLOW_ALL_ORIGINS_1'),
     os.getenv('CORS_ALLOW_ALL_ORIGINS_2'),
 ]
+# CORS_ALLOW_HEADERS
 
 
 # redis cache settings for development
