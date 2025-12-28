@@ -57,6 +57,7 @@ class UploadFileViewSet(viewsets.GenericViewSet):
         page = self.paginate_queryset(queryset)
         if page is not None:
             serializer = self.get_serializer(data=page, many=True)
+            serializer.is_valid()
             return self.get_paginated_response(serializer.data)
         
         serializer = self.get_serializer(data=queryset,many=True)
@@ -110,6 +111,7 @@ class UploadFileProcessedViewSet(viewsets.GenericViewSet):
         page = self.paginate_queryset(queryset)
         if page is not None:
             serializer = self.get_serializer(data=page,many=True)
+            serializer.is_valid()
             return self.get_paginated_response(serializer.data)
         
         serializer = self.get_serializer(data=queryset,many=True)
