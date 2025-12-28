@@ -19,9 +19,12 @@ from .serializers import (
     UploadFileTbSerializer,
 )
 
+from rest_framework.pagination import PageNumberPagination
+
 class UploadFileViewSet(viewsets.GenericViewSet):
     parser_classes = [parsers.MultiPartParser, parsers.FormParser, parsers.JSONParser]
-
+    pagination_class = PageNumberPagination
+   
     def get_serializer_class(self):
         if self.action == "list":
             return ListUploadFileTbSerializer
@@ -49,8 +52,14 @@ class UploadFileViewSet(viewsets.GenericViewSet):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def list(self, request):
-        queryset = UploadFileTb.objects.all()
-        serializer = ListUploadFileTbSerializer(queryset, many=True)
+        queryset = self.get_queryset()
+
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(data=page, many=True)
+            return self.get_paginated_response(serializer.data)
+        
+        serializer = self.get_serializer(data=queryset,many=True)
         return Response(serializer.data)
 
     def retrieve(self, request, pk=None):
@@ -61,12 +70,15 @@ class UploadFileViewSet(viewsets.GenericViewSet):
         serializer = UploadFileTbSerializer(upload_file)
         return Response(serializer.data)
 
+
+
 from .serializers import(
     UploadFileProcessedTbSerializer,
     ListUploadFileProcessedTbSerializer
 )
 class UploadFileProcessedViewSet(viewsets.GenericViewSet):
     parser_classes = [parsers.MultiPartParser, parsers.FormParser, parsers.JSONParser]
+    pagination_class = PageNumberPagination
 
     def get_serializer_class(self):
         if self.action == 'create':
@@ -94,6 +106,12 @@ class UploadFileProcessedViewSet(viewsets.GenericViewSet):
     
     def list(self,request):
         queryset = self.get_queryset()
+
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(data=page,many=True)
+            return self.get_paginated_response(serializer.data)
+        
         serializer = self.get_serializer(data=queryset,many=True)
         return Response(serializer.data,status.HTTP_200_OK)
     
