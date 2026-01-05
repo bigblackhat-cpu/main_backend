@@ -190,8 +190,8 @@ class FileServerGenericViewSet(viewsets.GenericViewSet):
         """
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
-            file_id = serializer.validated_data['upload_file_tb']
-            process_server_id = serializer.validated_data['process_server_tb']
+            file_id = serializer.validated_data['upload_file_tb'].id
+            process_server_id = serializer.validated_data['process_server_tb'].id
             instance_file = get_object_or_404(UploadFileTb,pk=file_id)
             instance_server = get_object_or_404(ProcessServerTb,pk=process_server_id)
             try:
