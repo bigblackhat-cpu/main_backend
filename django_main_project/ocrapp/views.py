@@ -177,7 +177,8 @@ import requests
 from django_redis import get_redis_connection
 from redis import Redis
 from django.core.cache import caches
-
+# from time import time
+from datetime import datetime, timezone
 class FileServerGenericViewSet(viewsets.GenericViewSet):
     def get_serializer_class(self):
         return FileServerTbSerializer
@@ -204,12 +205,22 @@ class FileServerGenericViewSet(viewsets.GenericViewSet):
 
                 """通过third_response，得到task_id，将file_id process_server_id task_id 存到redis"""
                 res = third_response.json()
-                task_cahes = caches['task_cache']
+                # task_cahes = caches['task_cache']
+                task_caches: Redis = get_redis_connection('task_cache')
 
-                task_cahes.add(
-                    name=f'{file_id}:{process_server_id}',
-                    value=res['task_id']
+                insert_mapping = {
+                    f'{instance_file.filename}:{instance_server.server_content}:{task_id}' : datetime.now(timezone.utc).timestamp()*1000
+                }
+                task_caches.zadd(
+                    'ocr_taskid',
+                    insert_mapping,
+                    nx=True
                 )
+
+                # task_cahes.zadd(
+                #     name=f'{file_id}:{process_server_id}',
+                #     value=res['task_id']
+                # )
                 
                 return Response({'msg':'success','code':200,'data':[{}]},status=status.HTTP_200_OK)
 
@@ -221,15 +232,28 @@ class FileServerGenericViewSet(viewsets.GenericViewSet):
 
     def list(self,request):
         """
-        列出正在计算的全部任务
+        列出在redis队列中的全部任务
         """
-        task_cache = caches['task_cache']
-        value_list = task_cache.get('task_cache_*')
+        task_caches :Redis = get_redis_connection('task_cache')
+
+        value_list = task_caches.zrevrange('ocr_taskid',0,9)
+        value_list: list[str] = [ item.decode('utf-8') for item in value_list ]
+        res = []
+        for item in value_list:
+            file_name, server_content, task_id = item.split(':')
+            res.append(
+                {
+                    'file_name':file_name,
+                    'server_content':server_content,
+                    'task_id':task_id
+                }
+            )
+    
         print(value_list)
         return Response({
             'msg':'看后端',
             'code':200,
-            'data':[],
+            'data':res,
         })
 
 class TaskStatusGenericAPIView(GenericAPIView):
