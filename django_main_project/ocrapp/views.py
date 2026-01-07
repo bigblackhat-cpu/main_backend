@@ -212,13 +212,16 @@ class FileServerGenericViewSet(viewsets.GenericViewSet):
     def list(self,request):
         """通过request的json,查询范围内的k-v"""
 
+from .serializers import TaskIdSerializer
+# 发送前端在状态中的taskid到这个接口上
 class TaskStatusGenericAPIView(GenericAPIView):
     def post(self,request):
-        serializer = FileServerTbSerializer(request.data)
+        serializer = TaskIdSerializer(request.data)
         if serializer.is_valid():
-            file_id = serializer.validated_data['upload_file_tb']
-            server_id = serializer.validated_data['process_server_tb']
+            file_id = serializer.validated_data['taskid']
             "通过file_id，server_id在redis中取出taskid，用taskid 取backend中task的具体任务状态，再序列化成json提供给前端"
+            "组合一个key，去redis中查询，xxxbackend_taskid,拿到value,再返回这个查询状态"
+
         
 
 class TaskDestroyGenericAPIView(GenericAPIView):
