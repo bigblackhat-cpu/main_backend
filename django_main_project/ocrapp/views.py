@@ -256,20 +256,16 @@ class FileServerGenericViewSet(viewsets.GenericViewSet):
             'data':res,
         })
 
+from .serializers import TaskIdSerializer
+# 发送前端在状态中的taskid到这个接口上
 class TaskStatusGenericAPIView(GenericAPIView):
     def post(self,request):
-        # 前端先通过 fs list ，拿到在缓存中的值，再通过这些值会是列表状态[]，再请求后端访问状态，后端再返回状态解析后的值
-        serializer = FileServerTbSerializer(request.data)
+        serializer = TaskIdSerializer(request.data)
         if serializer.is_valid():
-            file_id = serializer.validated_data['upload_file_tb']
-            server_id = serializer.validated_data['process_server_tb']
+            file_id = serializer.validated_data['taskid']
             "通过file_id，server_id在redis中取出taskid，用taskid 取backend中task的具体任务状态，再序列化成json提供给前端"
-            task_cache = caches['task_cache']
-            value_list = task_cache.get(f'task_cache_1:{file_id}:{server_id}')
-            return Response({'msg':'success','code':200,'data':'ping'})
-        
-        else:
-            return Response(serializer.errors)
+            "组合一个key，去redis中查询，xxxbackend_taskid,拿到value,再返回这个查询状态"
+
         
 
 class TaskDestroyGenericAPIView(GenericAPIView):

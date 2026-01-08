@@ -45,5 +45,9 @@ class FileServerTbSerializer(serializers.ModelSerializer):
         model = FileServerTb
         fields = ['upload_file_tb', 'process_server_tb']
 
+class TaskIdSerializer(serializers.Serializer):
+    taskid= serializers.CharField(max_length =1000)
+    
+
 
 
