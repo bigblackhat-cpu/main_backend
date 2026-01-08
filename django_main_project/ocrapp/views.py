@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 from rest_framework import parsers
 from rest_framework import status
-
+# from .until.Response import success_response,error_response
 # Create your views here.
 
 
@@ -19,9 +19,12 @@ from .serializers import (
     UploadFileTbSerializer,
 )
 
+from rest_framework.pagination import PageNumberPagination
+
 class UploadFileViewSet(viewsets.GenericViewSet):
     parser_classes = [parsers.MultiPartParser, parsers.FormParser, parsers.JSONParser]
-
+    pagination_class = PageNumberPagination
+   
     def get_serializer_class(self):
         if self.action == "list":
             return ListUploadFileTbSerializer
@@ -49,8 +52,15 @@ class UploadFileViewSet(viewsets.GenericViewSet):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def list(self, request):
-        queryset = UploadFileTb.objects.all()
-        serializer = ListUploadFileTbSerializer(queryset, many=True)
+        queryset = self.get_queryset()
+
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(data=page, many=True)
+            serializer.is_valid()
+            return self.get_paginated_response(serializer.data)
+        
+        serializer = self.get_serializer(data=queryset,many=True)
         return Response(serializer.data)
 
     def retrieve(self, request, pk=None):
@@ -61,12 +71,15 @@ class UploadFileViewSet(viewsets.GenericViewSet):
         serializer = UploadFileTbSerializer(upload_file)
         return Response(serializer.data)
 
+
+
 from .serializers import(
     UploadFileProcessedTbSerializer,
     ListUploadFileProcessedTbSerializer
 )
 class UploadFileProcessedViewSet(viewsets.GenericViewSet):
     parser_classes = [parsers.MultiPartParser, parsers.FormParser, parsers.JSONParser]
+    pagination_class = PageNumberPagination
 
     def get_serializer_class(self):
         if self.action == 'create':
@@ -94,6 +107,13 @@ class UploadFileProcessedViewSet(viewsets.GenericViewSet):
     
     def list(self,request):
         queryset = self.get_queryset()
+
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(data=page,many=True)
+            serializer.is_valid()
+            return self.get_paginated_response(serializer.data)
+        
         serializer = self.get_serializer(data=queryset,many=True)
         return Response(serializer.data,status.HTTP_200_OK)
     
@@ -106,6 +126,8 @@ class UploadFileProcessedViewSet(viewsets.GenericViewSet):
         return Response(serializer.data)
             
 
+
+
 from .serializers import (
     ProcessServerTbSerializer
 )
@@ -114,10 +136,6 @@ from .models import (
 )
 from drf_spectacular.utils import extend_schema, OpenApiResponse
 class ProcessServerModelViewSet(viewsets.ModelViewSet):
-    """
-    除了crud ，还有个，ping 通功能
-    list thiry server , now we have，可以ping一下第三方服务,第三方服务的crud
-    """
     queryset = ProcessServerTb.objects.all()
     serializer_class = ProcessServerTbSerializer
 
@@ -143,31 +161,24 @@ class ProcessServerModelViewSet(viewsets.ModelViewSet):
     )
     @action(detail=True,methods=['get'],)
     def ping_third_server(self, request, pk=None):
-        # serializer=ProcessServerTbSerializer(data=request.data)
         processServer = self.get_object()
-        # serializer = self.get_serializer(data=request.data)
-        # if serializer.is_valid():
-        processServer.server_backend
-        print(f'ping: third server : {processServer.server_backend} ....')
+        try:
+            response = requests.get(
+                url=processServer.server_backend,
+            )
+            return Response({'code':200,'status':response.json()})
+        except Exception as e:
+            return Response({'code':400,'msg':'ping error'}) 
 
-        return Response({'status':'ping is over'})
-
-            
-
-"""
-前端拿到taskid可以，轮询拿状态，也可以主动拿状态
-l:返回redis中的全部任务。
-c:接受文件id 第三方服务id，在数据库中查询数据，将数据发送到第三方服务，接受响应，判断响应，redis缓存正确响应的file-id server-id  task-id。
-r:more inform in redis，前端使用taskid，直接对backend发起请求？
-u:-
-d:能够删除未在计算中的任务
-
-"""
 from .serializers import FileServerTbSerializer
 from .models import UploadFileTb,ProcessServerTb
 from django.shortcuts import get_object_or_404
 import requests
 from django_redis import get_redis_connection
+from redis import Redis
+from django.core.cache import caches
+# from time import time
+from datetime import datetime, timezone
 class FileServerGenericViewSet(viewsets.GenericViewSet):
     def get_serializer_class(self):
         return FileServerTbSerializer
@@ -175,11 +186,13 @@ class FileServerGenericViewSet(viewsets.GenericViewSet):
         return 
     
     def create(self,request):
-        # serializer = FileServerTbSerializer(data=request.data)
+        """
+        推送到第三方服务计算
+        """
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
-            file_id = serializer.validated_data['upload_file_tb']
-            process_server_id = serializer.validated_data['process_server_tb']
+            file_id = serializer.validated_data['upload_file_tb'].id
+            process_server_id = serializer.validated_data['process_server_tb'].id
             instance_file = get_object_or_404(UploadFileTb,pk=file_id)
             instance_server = get_object_or_404(ProcessServerTb,pk=process_server_id)
             try:
@@ -191,17 +204,25 @@ class FileServerGenericViewSet(viewsets.GenericViewSet):
                 )
 
                 """通过third_response，得到task_id，将file_id process_server_id task_id 存到redis"""
+                res = third_response.json()
+                # task_cahes = caches['task_cache']
+                task_caches: Redis = get_redis_connection('task_cache')
+
+                insert_mapping = {
+                    f'{instance_file.filename}:{instance_server.server_content}:{task_id}' : datetime.now(timezone.utc).timestamp()*1000
+                }
+                task_caches.zadd(
+                    'ocr_taskid',
+                    insert_mapping,
+                    nx=True
+                )
+
+                # task_cahes.zadd(
+                #     name=f'{file_id}:{process_server_id}',
+                #     value=res['task_id']
+                # )
                 
-                task_id = None
-
-
-                redis_client = get_redis_connection('task_cache')
-                redis_client
-                redis_key = (file_id,process_server_id)
-                redis_value = (task_id)
-
-                redis_storage= redis_key + redis_value
-                return 
+                return Response({'msg':'success','code':200,'data':[{}]},status=status.HTTP_200_OK)
 
             except Exception as e:
                 return Response(e)
@@ -210,7 +231,30 @@ class FileServerGenericViewSet(viewsets.GenericViewSet):
 
 
     def list(self,request):
-        """通过request的json,查询范围内的k-v"""
+        """
+        列出在redis队列中的全部任务
+        """
+        task_caches :Redis = get_redis_connection('task_cache')
+
+        value_list = task_caches.zrevrange('ocr_taskid',0,9)
+        value_list: list[str] = [ item.decode('utf-8') for item in value_list ]
+        res = []
+        for item in value_list:
+            file_name, server_content, task_id = item.split(':')
+            res.append(
+                {
+                    'file_name':file_name,
+                    'server_content':server_content,
+                    'task_id':task_id
+                }
+            )
+    
+        print(value_list)
+        return Response({
+            'msg':'看后端',
+            'code':200,
+            'data':res,
+        })
 
 from .serializers import TaskIdSerializer
 # 发送前端在状态中的taskid到这个接口上
@@ -231,6 +275,7 @@ class TaskDestroyGenericAPIView(GenericAPIView):
             file_id = serializer.validated_data['upload_file_tb']
             server_id = serializer.validated_data['process_server_tb']
             "通过file_id，server_id在redis中取出taskid，用taskid 取backend中task的具体任务状态，判断状态，队列中可删除，计算中不可删除，已经完成不可删除由系统自动删除"
+
 
     
 

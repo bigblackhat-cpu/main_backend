@@ -1,0 +1,47 @@
+name: "CI/CD"
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+
+  Deploy:
+        runs-on: ubuntu-latest
+        environment: bbh_server
+        if: |
+          github.ref == 'refs/heads/main'
+        steps:
+          - name: connect to the host
+            uses: appleboy/ssh-action@v1
+            with:
+              host: ${{ secrets.HOST_NAME }}
+              username: ${{ secrets.USER_NAME }}
+              password: ${{ secrets.PASSWORD }}
+              port: ${{ secrets.PORT }}
+              script: |
+                # export PATH=$PATH:/home/${{ secrets.USER_NAME }}/.local/bin/
+                cd /srv/django_main_project/main_backend/django_main_project
+                echo '=========basic env==========='
+                # uv --version
+                # git --version
+                # docker --version
+                # ps -p 1 -o comm=
+                # systemctl --version
+                echo '=======start deploy pull "from main" ==========='
+                git pull
+                echo '=======uv sync==========='
+                /home/${{ secrets.USER_NAME }}/.local/bin/uv sync --index-url https://pypi.tuna.tsinghua.edu.cn/simple
+
+
+                echo '=======启动服务==========='
+                sudo systemctl restart django_web.service
+                echo '=======服务状态==========='
+                sudo systemctl status django_web.service
+
+
+
+                echo "pull over waiting systemctl config..."
+

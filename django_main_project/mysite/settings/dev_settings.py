@@ -72,17 +72,19 @@ MEDIA_ROOT = BASE_DIR / 'mediastore/'
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticstore/'
 # cors settings for development
-CORS_ALLOW_HEADERS = [    
+
+CORS_ALLOWED_ORIGINS  = [    
     os.getenv('CORS_ALLOW_ALL_ORIGINS_1'),
     os.getenv('CORS_ALLOW_ALL_ORIGINS_2'),
 ]
+# CORS_ALLOW_HEADERS
 
 
 # redis cache settings for development
 if os.getenv('REDIS_CACHE_LOCATION'):
     CACHES = {
         'default':{
-            'BACKEND': "django.core.cache.RedisCache",
+            'BACKEND': "django_redis.cache.RedisCache",
             'LOCATION': os.getenv('REDIS_CACHE_LOCATION'),
             'OPTIONS': {
                 'CLIENT_CLASS': 'django_redis.client.DefaultClient',
@@ -91,8 +93,8 @@ if os.getenv('REDIS_CACHE_LOCATION'):
             # 'TIMEOUT': 60*15,  # 15 minutes
         },
         'task_cache':{
-            'BACKEND': "django.core.cache.RedisCache",
-            'LOCATION': os.getenv('REDIS_CACHE_LOCATION'),
+            'BACKEND': "django_redis.cache.RedisCache",
+            'LOCATION': os.getenv('REDIS_CACHE_LOCATION_TASK'),
             "OPTIONS": {
                 "CLIENT_CLASS": "django_redis.client.DefaultClient",
             },
